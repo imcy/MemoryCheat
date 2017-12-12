@@ -186,6 +186,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DialogProgress.h" />
     <ClInclude Include="MemoryCheat.h" />
     <ClInclude Include="MemoryCheatDlg.h" />
     <ClInclude Include="Resource.h" />
@@ -193,6 +194,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DialogProgress.cpp" />
     <ClCompile Include="MemoryCheat.cpp" />
     <ClCompile Include="MemoryCheatDlg.cpp" />
     <ClCompile Include="stdafx.cpp">

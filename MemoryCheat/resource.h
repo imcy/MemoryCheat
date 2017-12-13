@@ -5,34 +5,42 @@
 #define IDD_MEMORYCHEAT_DIALOG          102
 #define IDR_MAINFRAME                   128
 #define IDD_DIALOG_PROGRESS_LIST        130
-#define IDC_BUTTON1                     1000
-#define IDC_PROGRESS1                   1001
-#define IDC_EDIT1                       1004
-#define IDC_BUTTON2                     1005
+#define IDS_ABOUTBOX                    132
+#define IDS_STRING_EQUAL                133
+#define IDS_STRING_1BYTE                134
+#define IDS_STRING_2BYTE                135
+#define IDS_STRING_4BYTE                136
+#define IDS_STRING_FLOAT                137
+#define IDS_STRING_DOUBLE               138
+#define IDC_BUTTON_PROGRESS             1000
+#define IDC_PROGRESS_SEARCH             1001
+#define IDC_EDIT_SEARCH_VALUE           1004
+#define IDC_BUTTON_FIRST                1005
 #define IDC_BUTTON3                     1006
 #define IDC_BUTTON4                     1007
-#define IDC_COMBO2                      1008
-#define IDC_EDIT2                       1009
+#define IDC_COMBO_VALUE_TYPE            1008
+#define IDC_EDIT_LIMIT_START            1009
 #define IDC_EDIT3                       1010
+#define IDC_EDIT_LIMIT_END              1010
 #define IDC_EDIT4                       1011
 #define IDC_EDIT5                       1012
 #define IDC_COMBO3                      1013
 #define IDC_EDIT6                       1014
 #define IDC_LIST1                       1015
-#define IDC_LIST2                       1016
+#define IDC_LIST_ADDRESS_TARGET         1016
 #define IDC_BUTTON5                     1017
 #define IDC_BUTTON6                     1018
 #define IDC_BUTTON7                     1019
-#define IDC_COMBOBOXEX1                 1019
 #define IDC_BUTTON8                     1020
+#define IDC_LIST_ADDRESS_TEMP           1021
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        132
+#define _APS_NEXT_RESOURCE_VALUE        133
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1020
+#define _APS_NEXT_CONTROL_VALUE         1022
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

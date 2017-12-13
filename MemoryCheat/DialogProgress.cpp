@@ -130,7 +130,7 @@ BOOL CDialogProgress::GetProcessList()
 			{
 				// 进程名
 				int index = m_lst.InsertItem(m_lst.GetItemCount(),
-					pe32.szExeFile, indexIco);
+					pe32.szExeFile, indexIco);	//在列表中插入进程图标
 				//进程ID
 				CString s;
 				s.Format(_T("%d"), pe32.th32ProcessID);
@@ -163,7 +163,56 @@ void CDialogProgress::DoDataExchange(CDataExchange* pDX)
 
 
 BEGIN_MESSAGE_MAP(CDialogProgress, CDialogEx)
+	ON_NOTIFY(NM_DBLCLK, IDC_LIST1, &CDialogProgress::OnDblclkList1)
 END_MESSAGE_MAP()
 
 
 // CDialogProgress 消息处理程序
+
+
+BOOL CDialogProgress::OnInitDialog()
+{
+	CDialogEx::OnInitDialog();
+
+	// 控件
+	{
+		LONG lStyle = GetWindowLong(m_lst.m_hWnd, GWL_STYLE);
+		lStyle &= ~LVS_TYPEMASK;
+		lStyle |= LVS_REPORT;
+		SetWindowLong(m_lst.GetSafeHwnd(), GWL_STYLE, lStyle);
+		DWORD dwStyle = m_lst.GetExtendedStyle();
+		dwStyle |= LVS_EX_FULLROWSELECT; //选中行 整征高亮
+		dwStyle |= LVS_EX_GRIDLINES; //网络线
+		m_lst.SetExtendedStyle(dwStyle);
+		// 设置列,并设置大小
+		{
+			CRect rc;
+			m_lst.GetClientRect(rc);
+			m_lst.InsertColumn(0, _T("进程名"), LVCFMT_LEFT, rc.Width() / 2);
+			m_lst.InsertColumn(1, _T("进程ID"), LVCFMT_LEFT, rc.Width() / 2);
+		}
+		// 设置控件关联的图标列表,这样才可以在每行的开头显示图标
+		m_imgList.Create(16, 16, ILC_COLOR32, 1, 1);
+		m_lst.SetImageList(&m_imgList, LVSIL_SMALL);
+	}
+	//列出进程
+	GetProcessList();
+
+	return TRUE;  // return TRUE unless you set the focus to a control
+				  // 异常: OCX 属性页应返回 FALSE
+}
+
+//双击列表相应函数
+void CDialogProgress::OnDblclkList1(NMHDR *pNMHDR, LRESULT *pResult)
+{
+	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+	// TODO: 在此添加控件通知处理程序代码
+	int nItem = pNMItemActivate->iItem;
+	// 如果有选中的行,设置回传给父窗口的变量,使父窗口可以知道当前选择的进程信息
+	if (nItem >= 0) {
+		m_dwProcessId = (DWORD)m_lst.GetItemData(nItem);
+		m_strProcessName = m_lst.GetItemText(nItem, 0);
+		OnOK();	//关闭返回父窗口
+	}
+	*pResult = 0;
+}

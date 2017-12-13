@@ -30,4 +30,6 @@ public:
 	static DWORD m_dwProcessId;
 	// 录脱选中的进程名
 	static CString m_strProcessName;
+	virtual BOOL OnInitDialog();
+	afx_msg void OnDblclkList1(NMHDR *pNMHDR, LRESULT *pResult);
 };

@@ -22,6 +22,16 @@ public:
 	{
 		return (m_hProcess && INVALID_HANDLE_VALUE != m_hProcess);
 	}
+	// 看看有没有消息.有就取出来,并分发
+	void WaitForIdle()
+	{
+		MSG msg;
+		while (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+			::TranslateMessage(&msg);
+			::DispatchMessage(&msg);
+		}
+	}
+
 	// 打开进程
 	bool OpenProcess(DWORD dwProcessId)
 	{
@@ -78,10 +88,49 @@ public:
 		m_pGoonNext = pGoonNext;
 		m_pArgsNext = pArgs;
 	}
+	// 获得结果
+	virtual const std::list<DWORD> &GetResults() const
+	{
+		return m_arList;
+	}
 
 	// 目标进程句柄
 	HANDLE m_hProcess{ INVALID_HANDLE_VALUE };
 	DWORD m_dwPageSize;
+	// 搜索的结果
+	std::list<DWORD> m_arList;
+	// 读内存
+	template<typename T>
+	bool Read(DWORD dwAddr, T &val)
+	{
+		if (::ReadProcessMemory(m_hProcess, (LPCVOID)dwAddr, &val, sizeof(val), NULL)) {
+			return true;
+		}
+		return false;
+	}
+	bool Read(DWORD dwAddr, unsigned char val[], size_t len)
+	{
+		if (::ReadProcessMemory(m_hProcess, (LPCVOID)dwAddr, &val[0], len, NULL)) {
+			return true;
+		}
+		return false;
+	}
+	// 写内存
+	template<typename T>
+	bool Write(DWORD dwAddr, T val)
+	{
+		if (::WriteProcessMemory(m_hProcess, (LPVOID)dwAddr, &val, sizeof(val), nullptr)) {
+			return true;
+		}
+		return false;
+	}
+	bool Write(DWORD dwAddr, unsigned char code[], size_t len)
+	{
+		if (::WriteProcessMemory(m_hProcess, (LPVOID)dwAddr, &code[0], len, nullptr)) {
+			return true;
+		}
+		return false;
+	}
 private:
 
 	// 真正的查找函数
@@ -125,7 +174,7 @@ private:
 			}
 
 
-			// 读亽内容
+			// 读入内容
 			DWORD dwReadSize;
 			char *Buf = new char[mbi.RegionSize];
 			if (ReadProcessMemory(hProcess, (LPVOID)mbi.BaseAddress, Buf, mbi.RegionSize, &dwReadSize) == 0) {
@@ -141,7 +190,7 @@ private:
 					void *p = &Buf[i];
 					// 等于要查找的值？
 					if (memcmp(p, pValue, len) == 0) {
-						m_arList.push_back(dwBaseAddr + i);
+						m_arList.push_back(dwBaseAddr + i);  //添加入结果列表中
 					}
 				}
 			}
@@ -187,6 +236,7 @@ private:
 
 		return !m_arList.empty();
 	}
+
 	// 回调函数
 	typedef bool(__stdcall *PFUN_CALLBACK)(void *pArgs, size_t nPageCount, size_t index);
 	// 首次扫描 回调函数
@@ -196,5 +246,6 @@ private:
 	// 回调函数的参数 : 为用户设置回调函数时,传过来的指针,当本类内调用回调函数时,原封不动传回去
 	void *m_pArgsFirst{ nullptr };
 	void *m_pArgsNext{ nullptr };
+
 };
 

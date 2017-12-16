@@ -47,8 +47,13 @@ CMemoryCheatDlg::CMemoryCheatDlg(CWnd* pParent /*=NULL*/)
 	, m_strValueTypeEdit(_T(""))
 	, m_strLimitBegin(_T("0x00000000"))
 	, m_strLimitEnd(_T("0x7FFFffff"))
+	, m_strAddressEdit(_T(""))
+	, m_strDesEdit(_T(""))
+	, m_strValueEdit(_T(""))
+	, m_strSearchValue(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	g_pGoon = &m_bGoon;
 }
 
 void CMemoryCheatDlg::DoDataExchange(CDataExchange* pDX)
@@ -63,13 +68,21 @@ void CMemoryCheatDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_LIST_ADDRESS_TARGET, m_lstAddressTarget);
 	DDX_Text(pDX, IDC_EDIT_LIMIT_START, m_strLimitBegin);
 	DDX_Text(pDX, IDC_EDIT_LIMIT_END, m_strLimitEnd);
+	DDX_Text(pDX, IDC_EDIT_ADDRESS, m_strAddressEdit);
+	DDX_Text(pDX, IDC_EDIT_DES, m_strDesEdit);
+	DDX_Text(pDX, IDC_EDIT_VALUE, m_strValueEdit);
+	DDX_Text(pDX, IDC_EDIT_SEARCH_VALUE, m_strSearchValue);
 }
 
 BEGIN_MESSAGE_MAP(CMemoryCheatDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
+	ON_WM_TIMER()
 	ON_BN_CLICKED(IDC_BUTTON_PROGRESS, &CMemoryCheatDlg::OnBnClickedButtonProgress)
 	ON_BN_CLICKED(IDC_BUTTON_FIRST, &CMemoryCheatDlg::OnBnClickedButtonFirst)
+	ON_BN_CLICKED(IDC_BUTTON_NEXT, &CMemoryCheatDlg::OnBnClickedButtonNext)
+	ON_NOTIFY(NM_DBLCLK, IDC_LIST_ADDRESS_TEMP, &CMemoryCheatDlg::OnNMDblclkListAddressTemp)
+	ON_NOTIFY(NM_DBLCLK, IDC_LIST_ADDRESS_TARGET, &CMemoryCheatDlg::OnNMDblclkListAddressTarget)
 END_MESSAGE_MAP()
 
 
@@ -156,13 +169,13 @@ BOOL CMemoryCheatDlg::OnInitDialog()
 		}
 		
 		// 设置搜索回调函数
-		// 传送的指针为 进度条
+		// 传送的函数指针为 进度条处理函数
 		m_pFinder->SetCallbackFirst(FirstSearchRoutine, &m_pProcess);
 		m_pFinder->SetCallbackNext(NextSearchRoutine, &m_pProcess);
 	}
 	
 	// 启动定时器 : 每秒更新一次 目标地址框中的数据
-	//SetTimer(1, 1000, nullptr);
+	SetTimer(1, 1000, nullptr);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -222,6 +235,80 @@ void CMemoryCheatDlg::OnBnClickedButtonProgress()
 	m_pFinder->OpenProcess(m_dwProcessId);
 }
 
+//添加目标地址列表数据
+void CMemoryCheatDlg::AddTargetListData(const TupleTargetLineData & info)
+{
+	int index = m_lstAddressTarget.GetItemCount();
+	// 插入新行
+	index = m_lstAddressTarget.InsertItem(index, std::get<0>(info));
+	// 设置地址
+	SetListItemValueFormat(m_lstAddressTarget, index, EListTargetIndexAddress, _T("%08X"), std::get<1>(info));
+	// 设置数据类型
+	m_lstAddressTarget.SetItemText(index, EListTargetIndexType, std::get<2>(info));
+	// 设置 值
+	m_lstAddressTarget.SetItemText(index, EListTargetIndexValue, std::get<3>(info));
+}
+//更新目标地址列表数据
+void CMemoryCheatDlg::UpdTargetListData(int index, const TupleTargetLineData & info)
+{
+	// 设置描述
+	m_lstAddressTarget.SetItemText(index, EListTargetIndexDescription, std::get<0>(info));
+	// 设置地址
+	SetListItemValueFormat(m_lstAddressTarget, index, EListTargetIndexAddress, _T("%08X"), std::get<1>(info));
+	// 设置 值类型
+	m_lstAddressTarget.SetItemText(index, EListTargetIndexType, std::get<2>(info));
+	// 设置 值
+	m_lstAddressTarget.SetItemText(index, EListTargetIndexValue, std::get<3>(info));
+}
+// 获得某行数据
+CMemoryCheatDlg::TupleTargetLineData CMemoryCheatDlg::GetListTargetData(int index)
+{
+	return std::make_tuple(
+		m_lstAddressTarget.GetItemText(index, EListTargetIndexDescription),
+		GetListItemValueDWORD(m_lstAddressTarget, index, EListTargetIndexAddress, 0x10),
+		m_lstAddressTarget.GetItemText(index, EListTargetIndexType),
+		m_lstAddressTarget.GetItemText(index, EListTargetIndexValue)
+	);
+}
+// 更新某行数据
+void CMemoryCheatDlg::UpdateTargetListValueByAddress()
+{
+	using namespace std;
+	for (int i = 0; i < m_lstAddressTarget.GetItemCount(); ++i) {
+		// 获得行数据
+		TupleTargetLineData dt = GetListTargetData(i);
+		// 内存地址
+		DWORD dwAddr = get<1>(dt);
+		CString  valueType = get<2>(dt);
+		// 读取 该内存处的值
+		CString value = ReadValue(valueType, dwAddr);
+		// 更新本行内容:变化的只是 值
+		UpdTargetListData(i, std::make_tuple(get<0>(dt), dwAddr, valueType, value));
+	}
+}
+// 获得 dword 类型的值
+DWORD CMemoryCheatDlg::GetListItemValueDWORD(CListCtrl & lst, int nItem, int nSubItem, int _Radix)
+{
+	CString s;
+	// 获得该列的文本
+	s = lst.GetItemText(nItem, nSubItem);
+	// 转换成 DWORD 类型
+	TCHAR *szEndPtr = nullptr;
+	DWORD d = _tcstoul(s.GetString(), &szEndPtr, _Radix);
+	return d;
+}
+// 根据传入的格式设置列 文本, 使用方法类似 printf
+void CMemoryCheatDlg::SetListItemValueFormat(CListCtrl & lst, int nItem, int nSubItem, PCTSTR szFormat, ...)
+{
+	va_list ap;
+	va_start(ap, szFormat);
+	TCHAR szBuf[1024] = { 0 };
+	// 将不定数量参数按照 szFormat 指定的格式,打印到 szBuf中
+	_vstprintf_s(szBuf, szFormat, ap);
+	// 设置列文本
+	lst.SetItemText(nItem, nSubItem, szBuf);
+	va_end(ap);
+}
 
 void CMemoryCheatDlg::OnBnClickedButtonFirst()
 {
@@ -267,7 +354,220 @@ void CMemoryCheatDlg::OnBnClickedButtonFirst()
 
 	// 记录 搜索结果
 	bool bFind = false;
+	// 根据选择的不同数据类型,进行不同方式的查找
+	switch (iIdx) {
+	case 0: { // 1字节
+		TCHAR *szEndPtr = nullptr;
+		unsigned long ul = _tcstoul(sTarget.GetString(), &szEndPtr, 10);
+		BYTE bb = (BYTE)(ul & 0x000000FF);
+		bFind = m_pFinder->FindFirst(m_dwProcessId, dwLimitBegin, dwLimitEnd, bb);
+		break;
+	}
+	case 1: { // 2字节
+		TCHAR *szEndPtr = nullptr;
+		unsigned long ul = _tcstoul(sTarget.GetString(), &szEndPtr, 10);
+		SHORT bb = (SHORT)(ul & 0x0000FFFF);
+		bFind = m_pFinder->FindFirst(m_dwProcessId, dwLimitBegin, dwLimitEnd, bb);
+		break;
+	}
+	case 2: { // 4字节
+		TCHAR *szEndPtr = nullptr;
+		unsigned long ul = _tcstoul(sTarget.GetString(), &szEndPtr, 10);
+		DWORD bb = (DWORD)(ul & 0xFFFFFFFF);
+		bFind = m_pFinder->FindFirst(m_dwProcessId, dwLimitBegin, dwLimitEnd, bb);
+		break;
+	}
+	case 3: { // float
+		TCHAR *szEndPtr = nullptr;
+		float f = _tcstof(sTarget.GetString(), &szEndPtr);
+		bFind = m_pFinder->FindFirst(m_dwProcessId, dwLimitBegin, dwLimitEnd, f);
+		break;
+	}
+	case 4: { // double
+		TCHAR *szEndPtr = nullptr;
+		double d = _tcstod(sTarget.GetString(), &szEndPtr);
+		bFind = m_pFinder->FindFirst(m_dwProcessId, dwLimitBegin, dwLimitEnd, d);
+		break;
+	}
+	default:
+		break;
+	}
+	// 如果 搜索结果返回 FALSE,退出
+	if (!bFind) {
+		goto __End;
+	}
+
+	// 设置结果内容
+	{
+		const std::list<DWORD> &lst = m_pFinder->GetResults();
+		int index = 1024; //最多显示1024结果
+		for (auto addr : lst) {
+			if (index-- <= 0) {
+				break;
+			}
+			int index = m_lstAddressTemp.InsertItem(0, _T(""));
+			CString s;
+			s.Format(_T("%08X"), addr);
+			m_lstAddressTemp.SetItemText(index, 0, s);
+		}
+	}
+
+	// 进度条清0
+	m_pProcess.SetPos(0);
+
+__End:
+	// 恢复按钮 可用状态
+	pBtnFirst->EnableWindow(TRUE);
+	// 继续搜索标置(false)
+	m_bGoon = false;
+	UpdateData(FALSE);
 }
+
+void CMemoryCheatDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	switch (nIDEvent) {
+	case 1: {
+		// 更新当前地址处的值
+		UpdateTargetListValueByAddress();
+		break;
+	}
+	default:
+		break;
+	}
+	CDialogEx::OnTimer(nIDEvent);
+}
+
+// 根据CComboBox不同选择项, 进行不同的 读取/写入内容
+CString CMemoryCheatDlg::ReadValue(const CString &strValueType, DWORD dwAddr)
+{
+	// 遍历 数组,获得类型信息
+	for (auto km : m_indexValueTypeArray) {
+		if (km.strValueType == strValueType) {
+			//根据类型信息和内存地址,读取数据
+			return ReadValue(km.index, dwAddr);
+		}
+	}
+	// 不会跑到这里来的.
+	assert(false);
+	return _T("");
+}
+CString CMemoryCheatDlg::ReadValue(int index, DWORD dwAddr)
+{
+	/*
+	对于 内存地址,该处的值 会根据数据类型不同,而产生不同的内容
+	CComboBox 中选择的 数据类型不同,则读取的方式不同
+	如: 选择 下标为0,代表 要把此处的值 解释为 BYTE类型,只读取一字节
+	下面的 switch根据不同的 下标, 调用不同模板函数
+	*/
+	CString strValue;
+	switch (index) {
+	case 0: { // 1字节
+		BYTE bValue;
+		if (m_pFinder->Read(dwAddr, bValue)) {
+			strValue.Format(_T("%d"), bValue);
+		}
+		break;
+	}
+	case 1: { // 2字节
+		SHORT bValue;
+		if (m_pFinder->Read(dwAddr, bValue)) {
+			strValue.Format(_T("%d"), bValue);
+		}
+		break;
+	}
+	case 2: { // 4字节
+		DWORD bValue;
+		if (m_pFinder->Read(dwAddr, bValue)) {
+			strValue.Format(_T("%d"), bValue);
+		}
+		break;
+	}
+	case 3: { // float
+		float bValue;
+		if (m_pFinder->Read(dwAddr, bValue)) {
+			strValue.Format(_T("%E"), bValue);
+		}
+		break;
+	}
+	case 4: {
+		double bValue;
+		if (m_pFinder->Read(dwAddr, bValue)) {
+			strValue.Format(_T("%E"), bValue);
+		}
+		break;
+	}
+	default:
+		break;
+	}
+	return strValue;
+}
+CString CMemoryCheatDlg::ReadValue(CComboBox &cbb, DWORD dwAddr)
+{
+	int iIdx = cbb.GetCurSel();
+	return ReadValue(iIdx, dwAddr);
+}
+CString CMemoryCheatDlg::ReadValue(CComboBox &cbb, const CString &strAddr)
+{
+	TCHAR *szPtr;
+	DWORD dwAddr = (DWORD)_tcstoul(strAddr.GetString(), &szPtr, 0x10);
+	return ReadValue(cbb, dwAddr);
+}
+void CMemoryCheatDlg::WriteValue(CComboBox &cbb, const CString &strAddr, const CString &value)
+{
+	TCHAR *szPtr;
+	DWORD dwAddr = (DWORD)_tcstoul(strAddr.GetString(), &szPtr, 0x10);
+	WriteValue(cbb, dwAddr, value);
+}
+void CMemoryCheatDlg::WriteValue(CComboBox &cbb, DWORD dwAddr, const CString &value)
+{
+	/*
+	对于 内存地址,该处的值 会根据数据类型不同,而产生不同的内容
+	CComboBox 中选择的 数据类型不同,则写入的的方式不同(字节顺序,字节数量等)
+	如: 选择 下标为0,代表 要把此处的值 解释为 BYTE类型,只需写入1字节
+	下面的 switch根据不同的 下标, 调用不同模板函数
+	*/
+	int iIdx = cbb.GetCurSel();
+	const CString sTarget = value;
+	switch (iIdx) {
+	case 0: { // 1字节
+		TCHAR *szEndPtr = nullptr;
+		unsigned long ul = _tcstoul(sTarget.GetString(), &szEndPtr, 10);
+		BYTE bb = (BYTE)(ul & 0x000000FF);
+		m_pFinder->Write(dwAddr, bb);
+		break;
+	}
+	case 1: { // 2字节
+		TCHAR *szEndPtr = nullptr;
+		unsigned long ul = _tcstoul(sTarget.GetString(), &szEndPtr, 10);
+		SHORT bb = (SHORT)(ul & 0x0000FFFF);
+		m_pFinder->Write(dwAddr, bb);
+		break;
+	}
+	case 2: { // 4字节
+		TCHAR *szEndPtr = nullptr;
+		unsigned long ul = _tcstoul(sTarget.GetString(), &szEndPtr, 10);
+		DWORD bb = (DWORD)(ul & 0xFFFFFFFF);
+		m_pFinder->Write(dwAddr, bb);
+		break;
+	}
+	case 3: { // float
+		TCHAR *szEndPtr = nullptr;
+		float f = _tcstof(sTarget.GetString(), &szEndPtr);
+		m_pFinder->Write(dwAddr, f);
+		break;
+	}
+	case 4: { // double
+		TCHAR *szEndPtr = nullptr;
+		double d = _tcstod(sTarget.GetString(), &szEndPtr);
+		m_pFinder->Write(dwAddr, d);
+		break;
+	}
+	default:
+		break;
+	}
+
+}
+
 
 // 获得 扫描范围
 void CMemoryCheatDlg::GetLimit(DWORD &dwLimitBegin, DWORD &dwLimitEnd)
@@ -280,4 +580,149 @@ void CMemoryCheatDlg::GetLimit(DWORD &dwLimitBegin, DWORD &dwLimitEnd)
 	_TCHAR *szEnd = NULL;
 	dwLimitBegin = _tcstol(s0.GetString(), &szEnd, 0x10);
 	dwLimitEnd = _tcstol(s1.GetString(), &szEnd, 0x10);
+}
+
+void CMemoryCheatDlg::OnBnClickedButtonNext()
+{
+	// 回调函数中控件搜索是否继续 的标志
+	m_bGoon = true;
+	UpdateData(TRUE);
+	// 目标值
+	CString sTarget;
+	GetDlgItemText(IDC_EDIT_SEARCH_VALUE, sTarget);
+	if (sTarget.IsEmpty()) {
+		AfxMessageBox(_T("请输入目标值"));
+		UpdateData(FALSE);
+		m_bGoon = false;
+		return;
+	}
+
+	// 获得当前按钮
+	auto pBtnNext = (CButton *)GetDlgItem(IDC_BUTTON_NEXT);
+	pBtnNext->EnableWindow(FALSE);
+
+	//清空内容
+	m_lstAddressTemp.DeleteAllItems();
+
+	// 获取当前选择项
+	int iIdx = m_cbbValueType.GetCurSel();
+
+	// 记录 搜索结果
+	bool bFind = false;
+
+	// 根据选择的不同数据类型,进行不同方式的查找
+	switch (iIdx) {
+	case 0: { // 1字节
+		TCHAR *szEndPtr = nullptr;
+		unsigned long ul = _tcstoul(sTarget.GetString(), &szEndPtr, 10);
+		BYTE bb = (BYTE)(ul & 0x000000FF);
+		bFind = m_pFinder->FindNext(bb);
+		break;
+	}
+	case 1: { // 2字节
+		TCHAR *szEndPtr = nullptr;
+		unsigned long ul = _tcstoul(sTarget.GetString(), &szEndPtr, 10);
+		SHORT bb = (SHORT)(ul & 0x0000FFFF);
+		bFind = m_pFinder->FindNext(bb);
+		break;
+	}
+	case 2: { // 4字节
+		TCHAR *szEndPtr = nullptr;
+		unsigned long ul = _tcstoul(sTarget.GetString(), &szEndPtr, 10);
+		DWORD bb = (DWORD)(ul & 0xFFFFFFFF);
+		bFind = m_pFinder->FindNext(bb);
+		break;
+	}
+	case 3: { // float
+		TCHAR *szEndPtr = nullptr;
+		float f = _tcstof(sTarget.GetString(), &szEndPtr);
+		bFind = m_pFinder->FindNext(f);
+		break;
+	}
+	case 4: { // double
+		TCHAR *szEndPtr = nullptr;
+		double d = _tcstod(sTarget.GetString(), &szEndPtr);
+		bFind = m_pFinder->FindNext(d);
+		break;
+	}
+	default:
+		break;
+	}
+
+	// 如果 搜索结果返回 FALSE,退出
+	if (!bFind) {
+		goto __End;
+	}
+
+	// 设置结果内容
+	{
+		const std::list<DWORD> &lst = m_pFinder->GetResults();
+		int index = 1024;
+		for (auto addr : lst) {
+			if (index-- <= 0) {
+				break;
+			}
+			int index = m_lstAddressTemp.InsertItem(0, _T(""));
+			CString s;
+			s.Format(_T("%08X"), addr);
+			m_lstAddressTemp.SetItemText(index, 0, s);
+		}
+	}
+
+	// 进度条清零
+	m_pProcess.SetPos(0);
+
+__End:
+	// 恢复按钮 可用状态
+	pBtnNext->EnableWindow(TRUE);
+	// 继续搜索标置(false)
+	m_bGoon = false;
+	UpdateData(FALSE);
+}
+
+// 双击临时地址列表: 把选中行的数的加入到 目标地址列表
+void CMemoryCheatDlg::OnNMDblclkListAddressTemp(NMHDR *pNMHDR, LRESULT *pResult)
+{
+	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+	int nItem = pNMItemActivate->iItem;
+	int iSubItem = pNMItemActivate->iSubItem;
+	if (nItem >= 0 && iSubItem >= 0) {
+		UpdateData(TRUE);
+		// 获得地址
+		DWORD dwAddr = GetListItemValueDWORD(m_lstAddressTemp, nItem, iSubItem, 0x10);
+
+		// 获得值类型,和值
+		CString strValue, strValueType;
+
+		// 获取 内存内容
+		strValue = ReadValue(m_cbbValueType, dwAddr);
+
+		// 获得 值类型
+		int iIdx = m_cbbValueType.GetCurSel();
+		m_cbbValueType.GetLBText(iIdx, strValueType);
+
+		// 增加到 目标地址列表框
+		AddTargetListData(std::make_tuple(_T(""), dwAddr, strValueType, strValue));
+
+		UpdateData(FALSE);
+	}
+	*pResult = 0;
+}
+
+
+void CMemoryCheatDlg::OnNMDblclkListAddressTarget(NMHDR *pNMHDR, LRESULT *pResult)
+{
+	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+	int nItem = pNMItemActivate->iItem;
+	int iSubItem = pNMItemActivate->iSubItem;
+	if (nItem >= 0 && iSubItem >= 0) {
+		CListCtrl &m_lst = m_lstAddressTarget;
+		// 获得列表中的选中行的各列值,并设置到编辑区
+		m_strDesEdit = m_lst.GetItemText(nItem, EListTargetIndexDescription);
+		m_strAddressEdit = m_lst.GetItemText(nItem, EListTargetIndexAddress);
+		m_strValueTypeEdit = m_lst.GetItemText(nItem, EListTargetIndexType);
+		m_strValueEdit = m_lst.GetItemText(nItem, EListTargetIndexValue);
+		UpdateData(FALSE);
+	}
+	*pResult = 0;
 }

@@ -18,20 +18,20 @@
 #define IDC_BUTTON_FIRST                1005
 #define IDC_BUTTON_NEXT                 1006
 #define IDC_BUTTON4                     1007
+#define IDC_BUTTON_STOP                 1007
 #define IDC_COMBO_VALUE_TYPE            1008
 #define IDC_EDIT_LIMIT_START            1009
 #define IDC_EDIT_LIMIT_END              1010
 #define IDC_EDIT_DES                    1011
 #define IDC_EDIT_ADDRESS                1012
 #define IDC_COMBO3                      1013
-#define IDC_COMBO_VALUE_TYPE2           1013
 #define IDC_EDIT_VALUE                  1014
 #define IDC_LIST1                       1015
 #define IDC_LIST_ADDRESS_TARGET         1016
-#define IDC_BUTTON5                     1017
-#define IDC_BUTTON6                     1018
-#define IDC_BUTTON7                     1019
-#define IDC_BUTTON8                     1020
+#define IDC_BUTTON_ADD                  1017
+#define IDC_BUTTON_SAVE                 1018
+#define IDC_BUTTON_DEL                  1019
+#define IDC_BUTTON_PLANT_INJECT         1020
 #define IDC_LIST_ADDRESS_TEMP           1021
 
 // Next default values for new objects

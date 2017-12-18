@@ -117,4 +117,8 @@ public:
 	CString m_strValueEdit;
 	//ÒªËÑË÷µÄÖµ
 	CString m_strSearchValue;
+	afx_msg void OnBnClickedButtonAdd();
+	afx_msg void OnBnClickedButtonSave();
+	afx_msg void OnBnClickedButtonDel();
+	afx_msg void OnBnClickedButtonStop();
 };

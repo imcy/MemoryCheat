@@ -83,6 +83,10 @@ BEGIN_MESSAGE_MAP(CMemoryCheatDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_NEXT, &CMemoryCheatDlg::OnBnClickedButtonNext)
 	ON_NOTIFY(NM_DBLCLK, IDC_LIST_ADDRESS_TEMP, &CMemoryCheatDlg::OnNMDblclkListAddressTemp)
 	ON_NOTIFY(NM_DBLCLK, IDC_LIST_ADDRESS_TARGET, &CMemoryCheatDlg::OnNMDblclkListAddressTarget)
+	ON_BN_CLICKED(IDC_BUTTON_ADD, &CMemoryCheatDlg::OnBnClickedButtonAdd)
+	ON_BN_CLICKED(IDC_BUTTON_SAVE, &CMemoryCheatDlg::OnBnClickedButtonSave)
+	ON_BN_CLICKED(IDC_BUTTON_DEL, &CMemoryCheatDlg::OnBnClickedButtonDel)
+	ON_BN_CLICKED(IDC_BUTTON_STOP, &CMemoryCheatDlg::OnBnClickedButtonStop)
 END_MESSAGE_MAP()
 
 
@@ -725,4 +729,72 @@ void CMemoryCheatDlg::OnNMDblclkListAddressTarget(NMHDR *pNMHDR, LRESULT *pResul
 		UpdateData(FALSE);
 	}
 	*pResult = 0;
+}
+
+// 增加按钮 : 增加 编辑区的数据到 目标地址列表框中
+void CMemoryCheatDlg::OnBnClickedButtonAdd()
+{
+	UpdateData(TRUE);
+
+	// 转换成 DWORD 类型
+	TCHAR *szEndPtr;
+	DWORD d;
+	d = _tcstoul(m_strAddressEdit.GetString(), &szEndPtr, 0x10);
+	// 增加到 目标地址列表框
+	AddTargetListData(std::make_tuple(m_strDesEdit, d, m_strValueTypeEdit, m_strValueEdit));
+
+	UpdateData(FALSE);
+}
+
+
+void CMemoryCheatDlg::OnBnClickedButtonSave()
+{
+	// 当前选中行
+	int index;
+	{
+		POSITION pos = m_lstAddressTarget.GetFirstSelectedItemPosition();
+		if (!pos) {
+			return;
+		}
+		index = m_lstAddressTemp.GetNextSelectedItem(pos);
+		// 没有选中行,返回
+		if (index < 0) {
+			return;
+		}
+	}
+
+	UpdateData(TRUE);
+
+	// 修改内存数据,并更新列表框内容
+	{
+		TCHAR *szEndPtr;
+		DWORD dwAddr = _tcstoul(m_strAddressEdit.GetString(), &szEndPtr, 0x10);
+		// 修改内存数据
+		WriteValue(m_cbbValueTypeEdit, dwAddr, m_strValueEdit);
+		// 同时 修改列表框中的数据
+		UpdTargetListData(index, std::make_tuple(m_strDesEdit, dwAddr, m_strValueTypeEdit, m_strValueEdit));
+	}
+	UpdateData(FALSE);
+}
+
+
+void CMemoryCheatDlg::OnBnClickedButtonDel()
+{
+	std::vector<int> lines;
+	// 获得选中行index,并加入到 lines变量中
+	POSITION pos = m_lstAddressTarget.GetFirstSelectedItemPosition();
+	while (pos) {
+		lines.push_back(m_lstAddressTarget.GetNextSelectedItem(pos));
+	}
+	// 从后向前,依次删除行
+	for (auto it = lines.rbegin(); it != lines.rend(); ++it) {
+		m_lstAddressTarget.DeleteItem(*it);
+	}
+}
+
+// 停止扫描
+void CMemoryCheatDlg::OnBnClickedButtonStop()
+{
+	// 变量置为0,回调函数会导致搜索方法提前返回
+	m_bGoon = false;
 }

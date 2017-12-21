@@ -87,6 +87,7 @@ BEGIN_MESSAGE_MAP(CMemoryCheatDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_SAVE, &CMemoryCheatDlg::OnBnClickedButtonSave)
 	ON_BN_CLICKED(IDC_BUTTON_DEL, &CMemoryCheatDlg::OnBnClickedButtonDel)
 	ON_BN_CLICKED(IDC_BUTTON_STOP, &CMemoryCheatDlg::OnBnClickedButtonStop)
+	ON_BN_CLICKED(IDC_BUTTON_PLANT_INJECT, &CMemoryCheatDlg::OnBnClickedButtonPlantInject)
 END_MESSAGE_MAP()
 
 
@@ -797,4 +798,16 @@ void CMemoryCheatDlg::OnBnClickedButtonStop()
 {
 	// 变量置为0,回调函数会导致搜索方法提前返回
 	m_bGoon = false;
+}
+
+
+void CMemoryCheatDlg::OnBnClickedButtonPlantInject()
+{
+	auto h = LoadLibrary(_T("pvz.dll"));
+	typedef void(__stdcall * PFun)();
+	PFun SetHook = (PFun)GetProcAddress(h, "SetHook");
+	if (SetHook) {
+		SetHook();
+	}
+	FreeLibrary(h);
 }

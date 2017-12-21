@@ -17,7 +17,6 @@
 #define IDC_EDIT_SEARCH_VALUE           1004
 #define IDC_BUTTON_FIRST                1005
 #define IDC_BUTTON_NEXT                 1006
-#define IDC_BUTTON4                     1007
 #define IDC_BUTTON_STOP                 1007
 #define IDC_COMBO_VALUE_TYPE            1008
 #define IDC_EDIT_LIMIT_START            1009

@@ -121,4 +121,5 @@ public:
 	afx_msg void OnBnClickedButtonSave();
 	afx_msg void OnBnClickedButtonDel();
 	afx_msg void OnBnClickedButtonStop();
+	afx_msg void OnBnClickedButtonPlantInject();
 };

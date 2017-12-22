@@ -1,7 +1,7 @@
-﻿  stdafx.cpp
-  pvz.cpp
-  DialogMain.cpp
+﻿  DialogMain.cpp
   正在生成代码...
-    正在创建库 F:\c++\MemoryCheat\Debug\pvz.lib 和对象 F:\c++\MemoryCheat\Debug\pvz.exp
+f:\c++\memorycheat\pvz\dialogmain.cpp(158): warning C4731: “RemovePlant”: 框架指针寄存器“ebp”被内联程序集代码修改
+  正在跳过...(未检测到相关更改)
+  pvz.cpp
   pvz.vcxproj -> F:\c++\MemoryCheat\Debug\pvz.dll
   pvz.vcxproj -> F:\c++\MemoryCheat\Debug\pvz.pdb (Partial PDB)
